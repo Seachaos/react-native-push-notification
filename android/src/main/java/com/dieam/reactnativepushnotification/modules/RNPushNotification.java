@@ -102,21 +102,31 @@ public class RNPushNotification extends ReactContextBaseJavaModule implements Ac
 
     private void startThreadForGetTokenFromFirebase() {
         new Thread(new Runnable() {
-            private void tryGetTokenFromFirebase() {
+            private boolean tryGetTokenFromFirebase() {
                 try {
                     Thread.sleep( 3000 );
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                String token = FirebaseInstanceId.getInstance().getToken();
-                WritableMap params = Arguments.createMap();
-                params.putString("deviceToken", token);
-                sendEvent("remoteNotificationsRegistered", params);
+                try {
+                    String token = FirebaseInstanceId.getInstance().getToken();
+                    if (token == null) {
+                        return false;
+                    }
+                    WritableMap params = Arguments.createMap();
+                    params.putString("deviceToken", token);
+                    sendEvent("remoteNotificationsRegistered", params);
+                    return true;
+                } catch ( Exception e ) {
+                    return false;
+                }
             }
             @Override
             public void run() {
                 for( int ax=0; ax < 3 ; ax++ ) {
-                    tryGetTokenFromFirebase();
+                    if ( tryGetTokenFromFirebase() ) {
+                        return;
+                    }
                 }
             }
         }).start();
